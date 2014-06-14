@@ -1,0 +1,1 @@
+python bin/ji.py $1

@@ -19,19 +19,48 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-import sys
-import javarepl
 
-def run(filename):
-    with(open(filename)) as f:
-       javarepl.wrap_into_valid_class(f)
-       javarepl.compile("/tmp/Executable.java")
-       javarepl.execute("Executable")
+import subprocess
 
-if __name__ == "__main__":
-    if(len(sys.argv) < 2):
-        print "An input file must be provided"
-        exit(0)
-    filename = sys.argv[1]
-    print "Executing file " + filename
-    run(filename);
+CLASS_PATTERN = """
+%s
+
+public class Executable {
+    public static void main(String args[]) {
+%s
+    }
+}
+"""
+
+def wrap_into_valid_class(fstream):
+    body=""
+    imports = ""  
+    for line in fstream.readlines():
+        if(line.startswith("import")):
+            imports += line
+            continue
+           
+        body += "        " + line
+    write_java_file(body, imports)
+
+def write_java_file(body="", imports=""):
+    body = (CLASS_PATTERN)%(imports, body)
+    with(open("/tmp/Executable.java", "w+")) as f:
+        f.write(body)
+
+def compile(filename):
+    args = ("javac", filename)
+    popen = subprocess.Popen(args, stdout=subprocess.PIPE)
+    popen.wait()
+    output = popen.stdout.read()
+    print output
+    return popen.returncode
+
+def execute(clazz):
+    args = ("java", "-cp","/tmp", clazz);
+    popen = subprocess.Popen(args, stdout=subprocess.PIPE)
+    popen.wait()
+    output = popen.stdout.read()
+    print output
+    return popen.returncode
+
